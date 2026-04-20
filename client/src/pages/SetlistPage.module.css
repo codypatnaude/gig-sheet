@@ -1,0 +1,62 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-bg);
+  overflow: hidden;
+  position: relative;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+  min-height: var(--header-height);
+}
+
+.appName {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-accent);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.whoBtn {
+  min-height: var(--touch-target);
+  min-width: var(--touch-target);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.whoBtnActive {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.body {
+  flex: 1;
+  overflow: hidden;
+}
+
+.whoPanel {
+  position: absolute;
+  top: var(--header-height);
+  right: var(--space-4);
+  width: 240px;
+  z-index: 50;
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-lg);
+}
