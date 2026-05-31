@@ -259,13 +259,13 @@ Bass content is no longer accessible.
 
 **Song Data**
 
-- **FR-001**: A song MUST have exactly one master chart field, replacing all six per-role chart fields from spec 001 (`chart_guitar`, `chart_bass`, `chart_drums`, `chart_vocals`, `chart_keys`, `chart_other`).
+- **FR-001**: A song MUST have exactly one chart field shared across all roles, replacing the six separate per-role chart fields that existed in spec 001. The single field is the master chart for every member.
 - **FR-002**: The master chart MUST be plain text. Section headers matching the pattern `[Anything]` MUST render visually distinct from lyric and chord lines.
 - **FR-003**: Any connected member MUST be able to edit the master chart; edits MUST sync to all connected devices within one second.
 
 **Role Notes**
 
-- **FR-004**: A note MUST carry: a song identifier, a zero-based master-chart line index, an authoring role, and text content.
+- **FR-004**: A note MUST carry: a song identifier, a reference to the specific master-chart line it is anchored to, an authoring role, and text content.
 - **FR-005**: Note text MUST be plain text with a maximum length of 280 characters.
 - **FR-006**: Any connected member MUST be able to add a note to any line of the master chart; the note is authored under their current role.
 - **FR-007**: Any member MUST be able to edit or delete a note they authored. Edits and deletes MUST sync to all connected devices within one second.
@@ -284,7 +284,7 @@ Bass content is no longer accessible.
 
 - **FR-015**: The set of scroll targets MUST consist exclusively of master-chart lines. Notes MUST NOT be scroll targets.
 - **FR-016** `[scroll-sync]`: Scroll position MUST be computed using only the master-chart line set; note count and note visibility state on any device MUST NOT affect scroll position calculation.
-- **FR-017** `[scroll-sync]`: The `scroll_update` / `scroll_synced` / `scroll_stopped` event payloads from spec 001 are unchanged by this feature. No new scroll events are introduced.
+- **FR-017** `[scroll-sync]`: The real-time scroll event contracts defined in spec 001 are unchanged by this feature. No new scroll events are introduced; the existing broadcast protocol is sufficient for master-chart-line-only scrolling.
 - **FR-018** `[scroll-sync]`: Adding, editing, or deleting a note while auto-scroll is running MUST NOT alter the current scroll position on any device.
 - **FR-019** `[scroll-sync]`: Positional drift between any two devices MUST remain below 50px after 5 continuous minutes of auto-scroll, regardless of the note counts or visibility states on each device.
 
@@ -319,7 +319,7 @@ Bass content is no longer accessible.
 
 ## Dependencies
 
-- **Supersedes** FR-005, FR-006, FR-007, FR-010, FR-011, FR-012 from spec 001 (the six per-role chart fields are removed).
+- **Supersedes** FR-005, FR-006, FR-007, FR-010, FR-011, FR-012 from spec 001 (the six separate per-role chart fields are removed and replaced by the single master chart).
 - **Extends** User Story 1 (Synchronized Chart Scrolling) from spec 001 — the scroll protocol payload is unchanged but the scroll target set changes from a per-role line count to the shared master-chart line count.
 - **Requires** spec 001 to be fully implemented (Socket.IO infrastructure, setlist, presence, song selection sync) before this feature is built on top of it.
 

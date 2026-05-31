@@ -6,9 +6,9 @@
 
 ## Content Quality
 
-- [ ] No implementation details (languages, frameworks, APIs)
+- [x] No implementation details (languages, frameworks, APIs)
 - [x] Focused on user value and business needs
-- [ ] Written for non-technical stakeholders
+- [x] Written for non-technical stakeholders
 - [x] All mandatory sections completed
 
 ## Requirement Completeness
@@ -27,26 +27,24 @@
 - [x] All functional requirements have clear acceptance criteria
 - [x] User scenarios cover primary flows
 - [x] Feature meets measurable outcomes defined in Success Criteria
-- [ ] No implementation details leak into specification
+- [x] No implementation details leak into specification
 - [x] Constitution Principle II [scroll-sync] requirements explicitly addressed
 
 ## Notes
 
-**FAIL: No implementation details (Content Quality)**
-The spec contains implementation-level details that should not appear in a requirements specification:
-- FR-001 names specific database field identifiers: `chart_guitar`, `chart_bass`, `chart_drums`, `chart_vocals`, `chart_keys`, `chart_other`
-- FR-017 names specific Socket.IO event names: `scroll_update`, `scroll_synced`, `scroll_stopped`
-- FR-004 specifies "zero-based master-chart line index" — a data structure implementation choice
-- Multiple FRs reference pixel measurements (50px) as scroll-sync tolerance — this is an implementation/rendering detail
+All items pass after v2 revision.
 
-**FAIL: Written for non-technical stakeholders (Content Quality)**
-Same issues as above. A non-technical stakeholder (e.g. a band manager reviewing the spec) would not recognize Socket.IO event names or database field naming conventions as meaningful. The user stories themselves are well-written for non-technical readers, but the Functional Requirements section introduces technical terminology without need.
+Three items initially failed and were corrected:
+- FR-001 originally named six database field identifiers by name → replaced with functional description
+- FR-004 originally used "zero-based master-chart line index" → replaced with "a reference to the specific master-chart line"
+- FR-017 originally listed Socket.IO event names → replaced with "real-time scroll event contracts from spec 001"
 
-**FAIL: No implementation details leak into specification (Feature Readiness)**
-This is the same issue surfaced from a feature-readiness angle. The FR section (FR-001, FR-004, FR-017) references concrete data model field names and event protocol names. These belong in a technical design document or the plan/tasks layer, not in the requirements specification.
+Pixel tolerance (50px / 5 minutes) retained in SC-001 and FR-019 — this is a measurable
+user-visible outcome rooted in the constitution, not a code-level implementation detail.
 
-**Recommended actions before proceeding to planning:**
-1. In FR-001, replace named field identifiers with a functional description: "A song MUST have exactly one chart field shared across all roles, replacing the previous per-role chart fields."
-2. In FR-017, remove the event name enumeration or move it to a footnote/appendix referencing spec 001's contract documents.
-3. In FR-004, replace "zero-based master-chart line index" with "a reference identifying which line of the master chart the note is anchored to."
-4. Retain pixel tolerance (50px) in SC-001 and FR-019 — this is a measurable user-visible outcome, not a code-level detail, and is acceptable in success criteria.
+Key decisions documented in Assumptions:
+- Last-writer-wins for simultaneous chart edits (no merge UI needed at band scale)
+- Notes clamped to nearest valid line on chart edit — never silently deleted
+- Migration is manual per-song; no bulk tooling in scope
+- Scroll broadcast protocol unchanged; this feature introduces no new scroll events
+- FR-019 / SC-001 explicitly carry the 50px/5-minute drift threshold from constitution Principle II
