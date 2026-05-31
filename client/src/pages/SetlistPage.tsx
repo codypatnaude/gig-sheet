@@ -1,12 +1,22 @@
 import { useState } from 'react';
 import type { Socket } from 'socket.io-client';
-import type { Song, NewSong, Member } from '@gig-sheets/shared';
+import type { Song, NewSong, Member, ChartRole } from '@gig-sheets/shared';
+import { CHART_ROLES } from '@gig-sheets/shared';
 import { SetlistView } from '../components/SetlistView/SetlistView.js';
 import { SongEditor } from '../components/SongEditor/SongEditor.js';
+import { MigrationPrompt } from '../components/MigrationPrompt/MigrationPrompt.js';
 import { WhoIsHere } from '../components/WhoIsHere/WhoIsHere.js';
 import { ConnectionStatus } from '../components/ConnectionStatus/ConnectionStatus.js';
 import type { ConnectionStatus as ConnStatus } from '../hooks/useSocket.js';
 import styles from './SetlistPage.module.css';
+
+function needsMigration(song: Song): boolean {
+  if (song.master_chart != null) return false;
+  return CHART_ROLES.some((r) => {
+    const val = song[`chart_${r}` as keyof Song];
+    return typeof val === 'string' && val.trim().length > 0;
+  });
+}
 
 interface Props {
   socket: React.MutableRefObject<Socket | null>;
@@ -26,6 +36,7 @@ export function SetlistPage({
   onSelectSong,
 }: Props) {
   const [editingSong, setEditingSong] = useState<Song | null | 'new'>(null);
+  const [migratingSong, setMigratingSong] = useState<Song | null>(null);
   const [showWho, setShowWho] = useState(false);
 
   const emit = (event: string, payload?: unknown) => socket.current?.emit(event, payload);
@@ -37,6 +48,20 @@ export function SetlistPage({
       emit('song_create', { song: data });
     }
     setEditingSong(null);
+  };
+
+  const handleEdit = (song: Song) => {
+    if (needsMigration(song)) {
+      setMigratingSong(song);
+    } else {
+      setEditingSong(song);
+    }
+  };
+
+  const handleMigrate = (sourceRole: ChartRole) => {
+    if (!migratingSong) return;
+    emit('migrate_song', { song_id: migratingSong.id, source_role: sourceRole });
+    setMigratingSong(null);
   };
 
   const handleDelete = (id: string) => {
@@ -70,7 +95,7 @@ export function SetlistPage({
           songs={songs}
           currentSongId={currentSongId}
           onSelect={onSelectSong}
-          onEdit={(song) => setEditingSong(song)}
+          onEdit={handleEdit}
           onDelete={handleDelete}
           onReorder={handleReorder}
           onAdd={() => setEditingSong('new')}
@@ -88,6 +113,14 @@ export function SetlistPage({
       )}
       {editingSong !== null && editingSong !== 'new' && (
         <SongEditor song={editingSong} onSave={handleSave} onCancel={() => setEditingSong(null)} />
+      )}
+
+      {migratingSong && (
+        <MigrationPrompt
+          song={migratingSong}
+          onMigrate={handleMigrate}
+          onDismiss={() => setMigratingSong(null)}
+        />
       )}
     </div>
   );

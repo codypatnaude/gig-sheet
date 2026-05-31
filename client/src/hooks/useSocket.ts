@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import type {
   Member,
+  Note,
   Song,
   ScrollState,
   StateSyncPayload,
@@ -11,6 +12,9 @@ import type {
   SongUpdatedPayload,
   SongSelectedPayload,
   ScrollSyncedPayload,
+  NoteAddedPayload,
+  NoteUpdatedPayload,
+  NoteDeletedPayload,
   Role,
 } from '@gig-sheets/shared';
 
@@ -21,6 +25,7 @@ export interface AppState {
   members: Member[];
   setlist: Song[];
   currentSongId: string | null;
+  notes: Note[];
   scrollState: ScrollState | null;
   connectionStatus: ConnectionStatus;
 }
@@ -39,6 +44,7 @@ export function useSocket() {
       members: [],
       setlist: [],
       currentSongId: null,
+      notes: [],
       scrollState: null,
       connectionStatus: 'connecting',
     };
@@ -62,7 +68,6 @@ export function useSocket() {
 
     socket.on('connect', () => {
       setState((s) => ({ ...s, connectionStatus: 'connected' }));
-      // Re-join on reconnect if we have stored identity
       const name = localStorage.getItem(LS_NAME_KEY);
       const role = localStorage.getItem(LS_ROLE_KEY) as Role | null;
       if (name && role) {
@@ -89,6 +94,7 @@ export function useSocket() {
         currentSongId: payload.current_song_id,
         scrollState: payload.scroll_state,
         members: payload.members,
+        notes: payload.notes,
       }));
     });
 
@@ -117,11 +123,37 @@ export function useSocket() {
         setlist: s.setlist.map((song) =>
           song.id === payload.song.id ? payload.song : song
         ),
+        // Apply clamped notes if server included them
+        notes: payload.notes
+          ? s.notes.map((n) => {
+              const clamped = payload.notes!.find((c) => c.id === n.id);
+              return clamped ?? n;
+            })
+          : s.notes,
       }));
     });
 
     socket.on('song_selected', (payload: SongSelectedPayload) => {
-      setState((s) => ({ ...s, currentSongId: payload.song_id }));
+      setState((s) => ({ ...s, currentSongId: payload.song_id, notes: payload.notes }));
+    });
+
+    // Note events
+    socket.on('note_added', (payload: NoteAddedPayload) => {
+      setState((s) => ({ ...s, notes: [...s.notes, payload.note] }));
+    });
+
+    socket.on('note_updated', (payload: NoteUpdatedPayload) => {
+      setState((s) => ({
+        ...s,
+        notes: s.notes.map((n) => (n.id === payload.note.id ? payload.note : n)),
+      }));
+    });
+
+    socket.on('note_deleted', (payload: NoteDeletedPayload) => {
+      setState((s) => ({
+        ...s,
+        notes: s.notes.filter((n) => n.id !== payload.note_id),
+      }));
     });
 
     // [scroll-sync]

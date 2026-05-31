@@ -45,6 +45,7 @@ export default function App() {
     return (
       <SongViewPage
         song={currentSong}
+        notes={state.notes}
         myRole={state.member.role}
         socket={socket}
         onBack={handleBack}
