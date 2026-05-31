@@ -1,8 +1,10 @@
 # gig-sheets Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-04-20
+Auto-generated from all feature plans. Last updated: 2026-05-31
 
 ## Active Technologies
+- TypeScript 5.x (frontend and backend) + React 18, Vite 5, Socket.IO 4.x, better-sqlite3 9.x, Vitest 2.x, dnd-kit 6.x (002-master-chart-role-notes)
+- SQLite via better-sqlite3 — `notes` table added; `master_chart` column added to `songs` (002-master-chart-role-notes)
 
 - TypeScript 5.x — frontend (React 18 + Vite) and backend (Node.js LTS 22.x)
 - React 18, Vite 5, Socket.IO Client 4.x, dnd-kit (frontend)
@@ -62,6 +64,7 @@ npm run dev          # Dev mode (client + server concurrently)
 - **V. Simplicity**: YAGNI. No over-engineering.
 
 ## Recent Changes
+- 002-master-chart-role-notes: Added TypeScript 5.x (frontend and backend) + React 18, Vite 5, Socket.IO 4.x, better-sqlite3 9.x, Vitest 2.x, dnd-kit 6.x
 
 - 001-gigsheet-mvp: Initial project setup, spec, plan, constitution
 
