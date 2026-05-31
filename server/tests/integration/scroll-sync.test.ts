@@ -12,6 +12,8 @@ import {
 } from './helpers.js';
 import type { ClientSocket } from 'socket.io-client';
 import type { ScrollSyncedPayload, StateSyncPayload } from '@gig-sheets/shared';
+import { createSong } from '../../src/db/songs.js';
+import { addNote } from '../../src/db/notes.js';
 
 let server: TestServer;
 let controller: ClientSocket;
@@ -156,6 +158,59 @@ describe('reconnect scroll state recovery', () => {
     expect(stateSync.scroll_state?.speed).toBe(2.0);
 
     disconnectAll(reconnected);
+  });
+});
+
+// [scroll-sync] Verify notes do not affect scroll position (spec 002 FR-015, FR-016, SC-001)
+describe('notes do not affect scroll sync', () => {
+  it('adding a note mid-scroll does not change broadcast position', async () => {
+    const song = createSong(server.db, {
+      title: 'Chart Song',
+      master_chart: Array.from({ length: 20 }, (_, i) => `line ${i}`).join('\n'),
+    });
+
+    // Establish a scroll position
+    const syncPromise = waitForEvent<ScrollSyncedPayload>(receiver, 'scroll_synced', 1000);
+    controller.emit('scroll_update', { song_id: song.id, position: 300, speed: 1.0 });
+    const beforeAdd = await syncPromise;
+    expect(beforeAdd.position).toBe(300);
+
+    // Add a note — should not trigger a scroll position change
+    addNote(server.db, { song_id: song.id, line_index: 2, role: 'Guitar', text: 'mid-scroll note' });
+
+    // Next scroll tick should still carry position from controller, unaffected by note
+    const syncPromise2 = waitForEvent<ScrollSyncedPayload>(receiver, 'scroll_synced', 1000);
+    controller.emit('scroll_update', { song_id: song.id, position: 350, speed: 1.0 });
+    const afterAdd = await syncPromise2;
+    expect(afterAdd.position).toBe(350);
+  });
+
+  it('[scroll-sync] two clients with different note counts stay within 50px after 60 ticks', async () => {
+    const song = createSong(server.db, {
+      title: 'Long Chart',
+      master_chart: Array.from({ length: 50 }, (_, i) => `line ${i}`).join('\n'),
+    });
+
+    // Add 10 notes for Guitar (controller role) — should not affect receiver sync
+    for (let i = 0; i < 10; i++) {
+      addNote(server.db, { song_id: song.id, line_index: i, role: 'Guitar', text: `note ${i}` });
+    }
+
+    let lastReceivedPosition = 0;
+    receiver.on('scroll_synced', (p: ScrollSyncedPayload) => {
+      lastReceivedPosition = p.position;
+    });
+
+    // Simulate 60 scroll ticks
+    for (let tick = 0; tick < 60; tick++) {
+      const position = tick * 10;
+      controller.emit('scroll_update', { song_id: song.id, position, speed: 1.0 });
+      await new Promise((r) => setTimeout(r, 30));
+    }
+    await new Promise((r) => setTimeout(r, 200)); // settle
+
+    const finalControllerPosition = 59 * 10;
+    expect(Math.abs(finalControllerPosition - lastReceivedPosition)).toBeLessThan(50);
   });
 });
 

@@ -5,6 +5,7 @@ import { registerMemberHandlers } from './handlers/member.js';
 import { registerSetlistHandlers } from './handlers/setlist.js';
 import { registerSelectionHandlers } from './handlers/selection.js';
 import { registerScrollHandlers } from './handlers/scroll.js';
+import { registerNotesHandlers } from './handlers/notes.js';
 
 export function createSocketServer(httpServer: HTTPServer, db: Database.Database): SocketIOServer {
   const io = new SocketIOServer(httpServer, {
@@ -17,8 +18,9 @@ export function createSocketServer(httpServer: HTTPServer, db: Database.Database
   io.on('connection', (socket) => {
     registerMemberHandlers(io, socket, db);
     registerSetlistHandlers(io, socket, db);
-    registerSelectionHandlers(io, socket);
+    registerSelectionHandlers(io, socket, db);
     registerScrollHandlers(io, socket);
+    registerNotesHandlers(io, socket, db);
   });
 
   return io;

@@ -7,6 +7,7 @@ import {
   deleteSong,
   reorderSongs,
 } from '../../db/songs.js';
+import { clampNotes } from '../../db/notes.js';
 import type {
   SongCreatePayload,
   SongUpdatePayload,
@@ -33,7 +34,24 @@ export function registerSetlistHandlers(io: Server, socket: Socket, db: Database
       return;
     }
     const updated = updateSong(db, song);
-    io.emit('song_updated', { song: updated });
+
+    // If master_chart was updated, clamp any out-of-range notes
+    let clampedNotes: ReturnType<typeof clampNotes> | undefined;
+    if (updated.master_chart != null) {
+      const lineCount = updated.master_chart.length > 0
+        ? updated.master_chart.split('\n').length
+        : 0;
+      if (lineCount > 0) {
+        const clamped = clampNotes(db, updated.id, lineCount);
+        if (clamped.length > 0) clampedNotes = clamped;
+      }
+    }
+
+    const broadcastPayload: { song: typeof updated; notes?: typeof clampedNotes } = {
+      song: updated,
+    };
+    if (clampedNotes) broadcastPayload.notes = clampedNotes;
+    io.emit('song_updated', broadcastPayload);
   });
 
   socket.on('song_delete', (payload: SongDeletePayload) => {

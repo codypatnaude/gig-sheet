@@ -1,6 +1,7 @@
 import type { Socket, Server } from 'socket.io';
 import type Database from 'better-sqlite3';
 import { getAllSongs } from '../../db/songs.js';
+import { getNotesForSong } from '../../db/notes.js';
 import { addMember, removeMember, updateMember, getState } from '../state.js';
 import type { MemberJoinPayload, MemberUpdatePayload } from '@gig-sheets/shared';
 import { ROLES } from '@gig-sheets/shared';
@@ -30,13 +31,17 @@ export function registerMemberHandlers(io: Server, socket: Socket, db: Database.
     // Notify others
     socket.broadcast.emit('member_joined', { member });
 
-    // Send full state to joining client
+    // Send full state to joining client, including notes for current song
     const state = getState();
+    const notes = state.current_song_id
+      ? getNotesForSong(db, state.current_song_id)
+      : [];
     socket.emit('state_sync', {
       setlist: getAllSongs(db),
       current_song_id: state.current_song_id,
       scroll_state: state.scroll_state,
       members: state.members,
+      notes,
     });
   });
 

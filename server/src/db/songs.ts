@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { v4 as uuidv4 } from 'uuid';
-import type { Song, NewSong } from '@gig-sheets/shared';
+import type { Song, NewSong, ChartRole } from '@gig-sheets/shared';
 
 export function getAllSongs(db: Database.Database): Song[] {
   return db
@@ -20,42 +20,43 @@ export function createSong(db: Database.Database, data: NewSong): Song {
   ).m ?? -1;
 
   const now = new Date().toISOString();
-  // Build with only defined optional fields (exactOptionalPropertyTypes)
-  const optional: Partial<Song> = {};
-  if (data.artist !== undefined) optional.artist = data.artist;
-  if (data.key !== undefined) optional.key = data.key;
-  if (data.tempo !== undefined) optional.tempo = data.tempo;
-  if (data.duration !== undefined) optional.duration = data.duration;
-  if (data.notes !== undefined) optional.notes = data.notes;
-  if (data.chart_guitar !== undefined) optional.chart_guitar = data.chart_guitar;
-  if (data.chart_bass !== undefined) optional.chart_bass = data.chart_bass;
-  if (data.chart_drums !== undefined) optional.chart_drums = data.chart_drums;
-  if (data.chart_vocals !== undefined) optional.chart_vocals = data.chart_vocals;
-  if (data.chart_keys !== undefined) optional.chart_keys = data.chart_keys;
-  if (data.chart_other !== undefined) optional.chart_other = data.chart_other;
+  const id = uuidv4();
 
-  const song: Song = {
-    id: uuidv4(),
+  // Use null (not undefined) for optional fields — better-sqlite3 named params
+  // require all @name references to exist as keys on the object.
+  const row = {
+    id,
     title: data.title,
+    artist: data.artist ?? null,
+    key: data.key ?? null,
+    tempo: data.tempo ?? null,
+    duration: data.duration ?? null,
+    notes: data.notes ?? null,
+    master_chart: data.master_chart ?? null,
+    chart_guitar: data.chart_guitar ?? null,
+    chart_bass: data.chart_bass ?? null,
+    chart_drums: data.chart_drums ?? null,
+    chart_vocals: data.chart_vocals ?? null,
+    chart_keys: data.chart_keys ?? null,
+    chart_other: data.chart_other ?? null,
     setlist_order: maxOrder + 1,
     created_at: now,
     updated_at: now,
-    ...optional,
   };
 
   db.prepare(`
     INSERT INTO songs (
-      id, title, artist, key, tempo, duration, notes,
+      id, title, artist, key, tempo, duration, notes, master_chart,
       chart_guitar, chart_bass, chart_drums, chart_vocals, chart_keys, chart_other,
       setlist_order, created_at, updated_at
     ) VALUES (
-      @id, @title, @artist, @key, @tempo, @duration, @notes,
+      @id, @title, @artist, @key, @tempo, @duration, @notes, @master_chart,
       @chart_guitar, @chart_bass, @chart_drums, @chart_vocals, @chart_keys, @chart_other,
       @setlist_order, @created_at, @updated_at
     )
-  `).run(song);
+  `).run(row);
 
-  return song;
+  return getSongById(db, id)!;
 }
 
 export function updateSong(db: Database.Database, song: Song): Song {
@@ -95,6 +96,34 @@ export function deleteSong(db: Database.Database, id: string): void {
     renumberStmt.run(id);
     deleteStmt.run(id);
   })();
+}
+
+export function migrateSong(
+  db: Database.Database,
+  songId: string,
+  sourceRole: ChartRole
+): Song | undefined {
+  const song = getSongById(db, songId);
+  if (!song) return undefined;
+
+  const chartField = `chart_${sourceRole}` as keyof Song;
+  const masterChart = (song[chartField] as string | undefined) ?? '';
+  const now = new Date().toISOString();
+
+  db.prepare(`
+    UPDATE songs SET
+      master_chart  = ?,
+      chart_guitar  = NULL,
+      chart_bass    = NULL,
+      chart_drums   = NULL,
+      chart_vocals  = NULL,
+      chart_keys    = NULL,
+      chart_other   = NULL,
+      updated_at    = ?
+    WHERE id = ?
+  `).run(masterChart, now, songId);
+
+  return getSongById(db, songId);
 }
 
 export function reorderSongs(db: Database.Database, orderedIds: string[]): void {

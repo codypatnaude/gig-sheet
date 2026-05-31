@@ -10,6 +10,8 @@ export const CHART_ROLES: ChartRole[] = ['guitar', 'bass', 'drums', 'vocals', 'k
 export const SPEED_VALUES = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0] as const;
 export type ScrollSpeed = (typeof SPEED_VALUES)[number];
 
+export type NoteVisibility = 'own' | 'all' | 'none';
+
 export interface Song {
   id: string;
   title: string;
@@ -18,6 +20,9 @@ export interface Song {
   tempo?: number;
   duration?: string;
   notes?: string;
+  // master_chart: undefined = unmigrated legacy song
+  master_chart?: string;
+  // Legacy per-role fields — kept for migration compat, not used in new code
   chart_guitar?: string;
   chart_bass?: string;
   chart_drums?: string;
@@ -30,6 +35,16 @@ export interface Song {
 }
 
 export type NewSong = Omit<Song, 'id' | 'created_at' | 'updated_at' | 'setlist_order'>;
+
+export interface Note {
+  id: string;
+  song_id: string;
+  line_index: number;
+  role: Role;
+  text: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface Member {
   socket_id: string;
@@ -92,12 +107,35 @@ export interface ScrollUpdatePayload {
   speed: ScrollSpeed;
 }
 
+// Note events — Client → Server
+export interface NoteAddPayload {
+  song_id: string;
+  line_index: number;
+  role: Role;
+  text: string;
+}
+
+export interface NoteUpdatePayload {
+  note_id: string;
+  text: string;
+}
+
+export interface NoteDeletePayload {
+  note_id: string;
+}
+
+export interface MigrateSongPayload {
+  song_id: string;
+  source_role: ChartRole;
+}
+
 // Server → Client
 export interface StateSyncPayload {
   setlist: Song[];
   current_song_id: string | null;
   scroll_state: ScrollState | null;
   members: Member[];
+  notes: Note[];
 }
 
 export interface MemberJoinedPayload {
@@ -114,6 +152,7 @@ export interface MemberUpdatedPayload {
 
 export interface SongSelectedPayload {
   song_id: string;
+  notes: Note[];
 }
 
 export interface SetlistUpdatedPayload {
@@ -122,6 +161,20 @@ export interface SetlistUpdatedPayload {
 
 export interface SongUpdatedPayload {
   song: Song;
+  notes?: Note[];
+}
+
+// Note events — Server → Client
+export interface NoteAddedPayload {
+  note: Note;
+}
+
+export interface NoteUpdatedPayload {
+  note: Note;
+}
+
+export interface NoteDeletedPayload {
+  note_id: string;
 }
 
 // [scroll-sync]
